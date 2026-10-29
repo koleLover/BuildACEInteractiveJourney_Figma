@@ -1,0 +1,11 @@
+{
+  "title": "ACE Interactive Journey",
+  "description": "Explore the ACE system through interactive guides to Firm, Cosec, Assistant, and Director roles, their responsibilities, and key workflows.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
