@@ -1,7 +1,12 @@
-import { useEffect, useState, type ReactNode } from "react"
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react"
 
 type RoleSlug = "firm" | "cosec" | "assistant" | "director"
-type IconName = "arrow" | "bell" | "book" | "briefcase" | "building" | "calendar" | "check" | "chevron" | "clipboard" | "document" | "folder" | "home" | "inbox" | "layers" | "menu" | "people" | "person" | "review" | "shield" | "spark" | "subscription" | "tasks" | "users" | "x"
+type IconName = "arrow" | "bell" | "book" | "briefcase" | "building" | "calendar" | "chat" | "check" | "chevron" | "clipboard" | "document" | "folder" | "home" | "inbox" | "layers" | "menu" | "people" | "person" | "review" | "send" | "shield" | "spark" | "subscription" | "tasks" | "users" | "x"
 
 type Responsibility = {
   icon: IconName
@@ -289,6 +294,12 @@ function Icon({ name, size = 24 }: { name: IconName size?: number }) {
         <path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" />
       </>
     ),
+    chat: (
+      <>
+        <path d="M21 12a8 8 0 0 1-8 8H7l-4 2 1.4-4.2A9 9 0 1 1 21 12Z" />
+        <path d="M8 12h.01M12 12h.01M16 12h.01" />
+      </>
+    ),
     check: (
       <>
         <circle cx="12" cy="12" r="9" />
@@ -346,6 +357,12 @@ function Icon({ name, size = 24 }: { name: IconName size?: number }) {
       <>
         <circle cx="10" cy="10" r="6" />
         <path d="m15 15 6 6M7.5 10l1.7 1.7 3.5-3.5" />
+      </>
+    ),
+    send: (
+      <>
+        <path d="m22 2-7 20-4-9-9-4Z" />
+        <path d="M22 2 11 13" />
       </>
     ),
     shield: (
@@ -667,9 +684,9 @@ function HomePage({ navigate }: { navigate: (path: string) => void }) {
                 <Icon name="spark" size={16} /> Your guided ACE experience
               </span>
               <h1>
-                Understand ACE.
+                <span className="hero__instrument-title">Understand ACE</span>
                 <br />
-                Know your role.
+                <span className="hero__instrument-title">Know your role</span>
               </h1>
               <p>
                 Explore how Firm, Cosec, Assistant, and Director users move
@@ -1099,6 +1116,1075 @@ function getPath() {
   return window.location.pathname
 }
 
+type ChatMessage = {
+  id: string
+  sender: "assistant" | "user"
+  text: string
+  kind?: "welcome" | "answer" | "fallback" | "support"
+  entryId?: string
+  contextual?: boolean
+  feedback?: "helpful" | "not-helpful"
+}
+
+type ChatLanguage = "en" | "ms"
+type KnowledgeMode = "customer" | "staff"
+
+type KnowledgeEntry = {
+  id: string
+  role: "Firm" | "Cosec" | "Assistant" | "Director" | "All roles"
+  module: string
+  keywords: string[]
+  answer: Record<ChatLanguage, string>
+  steps: Record<ChatLanguage, string[]>
+  source: string
+  lastUpdated: Record<ChatLanguage, string>
+  guideUrl?: string
+}
+
+const knowledgeEntries: KnowledgeEntry[] = [
+  {
+    id: "new-firm",
+    role: "Firm",
+    module: "Firm registration",
+    keywords: ["add a new firm", "create a firm", "register a firm", "new firm"],
+    answer: {
+      en: "I cannot verify a customer-facing procedure for creating a new Firm account from the current prototype knowledge. Firm creation may require an authorised administrative process.",
+      ms: "Saya tidak dapat mengesahkan prosedur pelanggan untuk mencipta akaun Firm baharu daripada pengetahuan prototaip semasa. Penciptaan Firm mungkin memerlukan proses pentadbiran yang dibenarkan.",
+    },
+    steps: {
+      en: [
+        "Confirm whether you need a new Firm account or a Cosec account under an existing Firm.",
+        "Ask an authorised ACE administrator or support team to verify the current registration process.",
+      ],
+      ms: [
+        "Sahkan sama ada anda memerlukan akaun Firm baharu atau akaun Cosec di bawah Firm sedia ada.",
+        "Minta pentadbir ACE atau pasukan sokongan yang dibenarkan mengesahkan proses pendaftaran semasa.",
+      ],
+    },
+    source: "ACE Central Knowledge — procedure not available in prototype",
+    lastUpdated: {
+      en: "Not live-verified",
+      ms: "Belum disahkan secara langsung",
+    },
+  },
+  {
+    id: "firm-cosec",
+    role: "Firm",
+    module: "Cosec account management",
+    keywords: [
+      "add cosec",
+      "new cosec",
+      "cosec account",
+      "register cosec",
+      "manage cosec",
+    ],
+    answer: {
+      en: "Firm users can manage Cosec accounts where that function is available to their subscription and permissions.",
+      ms: "Pengguna Firm boleh mengurus akaun Cosec apabila fungsi tersebut tersedia dalam langganan dan kebenaran mereka.",
+    },
+    steps: {
+      en: [
+        "Sign in with an authorised Firm account.",
+        "Open the Cosec or subscription management area.",
+        "Choose the available registration action, enter the required details, and review before confirming.",
+      ],
+      ms: [
+        "Log masuk menggunakan akaun Firm yang dibenarkan.",
+        "Buka bahagian pengurusan Cosec atau langganan.",
+        "Pilih tindakan pendaftaran yang tersedia, masukkan maklumat diperlukan dan semak sebelum mengesahkan.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Firm / Cosec accounts",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl:
+      "https://help.blazetech.my/docs/firm-user/subscription/register-a-new-cosec/",
+  },
+  {
+    id: "firm-clients",
+    role: "Firm",
+    module: "Clients and groups",
+    keywords: [
+      "client group",
+      "client groups",
+      "manage clients",
+      "manage my clients",
+      "group clients",
+      "firm clients",
+    ],
+    answer: {
+      en: "Firm users can review their client portfolio and organise clients into groups when those controls are available.",
+      ms: "Pengguna Firm boleh menyemak portfolio pelanggan dan menyusun pelanggan ke dalam kumpulan apabila kawalan tersebut tersedia.",
+    },
+    steps: {
+      en: [
+        "Open the Firm Clients area.",
+        "Select the client you want to review, or open Groups to organise multiple clients.",
+        "Save only the changes allowed by your account permissions.",
+      ],
+      ms: [
+        "Buka bahagian Firm Clients.",
+        "Pilih pelanggan yang ingin disemak, atau buka Groups untuk menyusun beberapa pelanggan.",
+        "Simpan hanya perubahan yang dibenarkan oleh akaun anda.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Firm clients and groups",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl: "https://help.blazetech.my/docs/firm-user/clients/",
+  },
+  {
+    id: "firm-subscription",
+    role: "Firm",
+    module: "Subscription",
+    keywords: [
+      "subscription",
+      "check my subscription",
+      "renewal",
+      "renew subscription",
+      "package",
+    ],
+    answer: {
+      en: "Subscription information belongs to the Firm journey. The exact options shown depend on the Firm account and current package.",
+      ms: "Maklumat langganan berada dalam perjalanan Firm. Pilihan sebenar bergantung pada akaun Firm dan pakej semasa.",
+    },
+    steps: {
+      en: [
+        "Sign in as an authorised Firm user.",
+        "Open Subscription to review the current package or renewal information.",
+        "Verify the displayed details before starting any available renewal action.",
+      ],
+      ms: [
+        "Log masuk sebagai pengguna Firm yang dibenarkan.",
+        "Buka Subscription untuk menyemak pakej semasa atau maklumat pembaharuan.",
+        "Sahkan butiran yang dipaparkan sebelum memulakan tindakan pembaharuan yang tersedia.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Firm subscription",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl: "https://help.blazetech.my/docs/firm-user/subscription/",
+  },
+  {
+    id: "firm-tasks",
+    role: "Firm",
+    module: "Task management",
+    keywords: [
+      "manage tasks",
+      "firm tasks",
+      "monitor tasks",
+      "assign task",
+      "task management",
+    ],
+    answer: {
+      en: "Firm task tools help authorised users monitor supported work and keep assignments moving to the appropriate person.",
+      ms: "Alat tugasan Firm membantu pengguna yang dibenarkan memantau kerja dan memastikan tugasan bergerak kepada individu yang sesuai.",
+    },
+    steps: {
+      en: [
+        "Open the Firm Tasks area.",
+        "Filter or select the relevant task to review its status and assignment.",
+        "Use only the management actions displayed for your account.",
+      ],
+      ms: [
+        "Buka bahagian Firm Tasks.",
+        "Tapis atau pilih tugasan berkaitan untuk menyemak status dan penugasannya.",
+        "Gunakan hanya tindakan pengurusan yang dipaparkan untuk akaun anda.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Firm tasks",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl: "https://help.blazetech.my/docs/firm-user/tasks/",
+  },
+  {
+    id: "cosec-records",
+    role: "Cosec",
+    module: "Client and company records",
+    keywords: [
+      "company records",
+      "manage company records",
+      "client records",
+      "company information",
+      "client information",
+    ],
+    answer: {
+      en: "Cosec users can maintain client and company information that is available to their account.",
+      ms: "Pengguna Cosec boleh menyelenggara maklumat pelanggan dan syarikat yang tersedia kepada akaun mereka.",
+    },
+    steps: {
+      en: [
+        "Open Clients and select the relevant company.",
+        "Open Client Information or the appropriate record section.",
+        "Review the details, make permitted updates, and save after checking accuracy.",
+      ],
+      ms: [
+        "Buka Clients dan pilih syarikat berkaitan.",
+        "Buka Client Information atau bahagian rekod yang sesuai.",
+        "Semak butiran, buat kemas kini yang dibenarkan dan simpan selepas memastikan ketepatan.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Cosec client records",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl:
+      "https://help.blazetech.my/docs/cosec-user/client-menu/client-information/",
+  },
+  {
+    id: "cosec-registers",
+    role: "Cosec",
+    module: "Statutory registers",
+    keywords: [
+      "statutory register",
+      "statutory registers",
+      "register of members",
+      "register of directors",
+      "find registers",
+      "company register",
+    ],
+    answer: {
+      en: "Statutory registers are documented within the selected client's menu for Cosec users. Available register types depend on the company record and permissions.",
+      ms: "Daftar berkanun didokumenkan dalam menu pelanggan yang dipilih untuk pengguna Cosec. Jenis daftar yang tersedia bergantung pada rekod syarikat dan kebenaran.",
+    },
+    steps: {
+      en: [
+        "Open Clients and choose the relevant company.",
+        "Open the Client Menu and select the required register, such as Members or Directors.",
+        "Review or update the register only through the actions available to you.",
+      ],
+      ms: [
+        "Buka Clients dan pilih syarikat berkaitan.",
+        "Buka Client Menu dan pilih daftar diperlukan, seperti Members atau Directors.",
+        "Semak atau kemas kini daftar hanya melalui tindakan yang tersedia kepada anda.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Cosec registers",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl:
+      "https://help.blazetech.my/docs/cosec-user/client-menu/register-of-members/",
+  },
+  {
+    id: "cosec-documents",
+    role: "Cosec",
+    module: "Documents, templates and filings",
+    keywords: [
+      "prepare company documents",
+      "company documents",
+      "company filings",
+      "manage filings",
+      "filing",
+      "template",
+      "storeroom",
+    ],
+    answer: {
+      en: "Cosec document work may use client templates and the client storeroom. Filing steps vary by document type, so this prototype cannot verify one universal submission process.",
+      ms: "Kerja dokumen Cosec mungkin menggunakan templat pelanggan dan storeroom pelanggan. Langkah pemfailan berbeza mengikut jenis dokumen, jadi prototaip ini tidak dapat mengesahkan satu proses penghantaran umum.",
+    },
+    steps: {
+      en: [
+        "Select the relevant client and identify the required document or filing.",
+        "Use the appropriate approved template or existing client record.",
+        "Review the completed document and follow the specific filing workflow available for that item.",
+      ],
+      ms: [
+        "Pilih pelanggan berkaitan dan kenal pasti dokumen atau pemfailan yang diperlukan.",
+        "Gunakan templat diluluskan atau rekod pelanggan sedia ada yang sesuai.",
+        "Semak dokumen yang lengkap dan ikuti aliran pemfailan khusus yang tersedia untuk item tersebut.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Cosec documents",
+    lastUpdated: {
+      en: "Procedure varies; not live-verified",
+      ms: "Prosedur berbeza; belum disahkan secara langsung",
+    },
+    guideUrl: "https://help.blazetech.my/docs/cosec-user/templates/",
+  },
+  {
+    id: "assistant-tasks",
+    role: "Assistant",
+    module: "Assigned tasks",
+    keywords: [
+      "assigned tasks",
+      "view my tasks",
+      "view assigned tasks",
+      "task progress",
+      "progress of a task",
+      "check progress",
+      "my task",
+    ],
+    answer: {
+      en: "Assistant users should see only tasks and clients assigned to them. Task visibility and status actions depend on the assignment.",
+      ms: "Pengguna Assistant sepatutnya melihat hanya tugasan dan pelanggan yang diberikan kepada mereka. Paparan tugasan dan tindakan status bergantung pada penugasan.",
+    },
+    steps: {
+      en: [
+        "Sign in with your Assistant account and open the assigned work area.",
+        "Select the relevant task to read its client context, instructions, and current status.",
+        "Use the available status action after completing the assigned work.",
+      ],
+      ms: [
+        "Log masuk menggunakan akaun Assistant dan buka bahagian kerja yang diberikan.",
+        "Pilih tugasan berkaitan untuk membaca konteks pelanggan, arahan dan status semasa.",
+        "Gunakan tindakan status yang tersedia selepas menyiapkan kerja yang diberikan.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Assistant tasks",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl: "https://help.blazetech.my/docs/assistant/assistant-overview/",
+  },
+  {
+    id: "assistant-documents",
+    role: "Assistant",
+    module: "Document preparation and review",
+    keywords: [
+      "submit documents",
+      "submit a document",
+      "prepare and submit",
+      "prepare document",
+      "document review",
+      "send document",
+    ],
+    answer: {
+      en: "Assistants can prepare documents within their assigned access. Submission or review actions should only be used when the assigned workflow provides them.",
+      ms: "Assistant boleh menyediakan dokumen dalam akses yang diberikan. Tindakan penghantaran atau semakan hanya patut digunakan apabila aliran tugasan menyediakannya.",
+    },
+    steps: {
+      en: [
+        "Open the assigned task and confirm the required document.",
+        "Prepare the document using the instructions and client information available to you.",
+        "Review your work, then choose Submit for Review only if that action appears in the workflow.",
+      ],
+      ms: [
+        "Buka tugasan yang diberikan dan sahkan dokumen diperlukan.",
+        "Sediakan dokumen menggunakan arahan dan maklumat pelanggan yang tersedia.",
+        "Semak kerja anda, kemudian pilih Submit for Review hanya jika tindakan itu muncul dalam aliran kerja.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Assistant document flow",
+    lastUpdated: {
+      en: "Demonstration workflow; not live-verified",
+      ms: "Aliran demonstrasi; belum disahkan secara langsung",
+    },
+    guideUrl: "https://help.blazetech.my/docs/assistant/",
+  },
+  {
+    id: "assistant-onboarding",
+    role: "Assistant",
+    module: "Client onboarding",
+    keywords: [
+      "client onboarding",
+      "assist with onboarding",
+      "onboarding",
+      "new client task",
+      "new clients",
+    ],
+    answer: {
+      en: "ACE documents Assistant involvement in new-client onboarding tasks when those tasks are assigned by an authorised user.",
+      ms: "ACE mendokumenkan penglibatan Assistant dalam tugasan onboarding pelanggan baharu apabila tugasan diberikan oleh pengguna yang dibenarkan.",
+    },
+    steps: {
+      en: [
+        "Open the assigned onboarding task.",
+        "Review the client details and requested onboarding information.",
+        "Complete only the assigned steps and update or submit the task through available actions.",
+      ],
+      ms: [
+        "Buka tugasan onboarding yang diberikan.",
+        "Semak butiran pelanggan dan maklumat onboarding yang diminta.",
+        "Lengkapkan hanya langkah yang diberikan dan kemas kini atau hantar tugasan melalui tindakan tersedia.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Assistant onboarding",
+    lastUpdated: {
+      en: "Mapped from public guide; not live-verified",
+      ms: "Dipetakan daripada panduan awam; belum disahkan secara langsung",
+    },
+    guideUrl:
+      "https://help.blazetech.my/docs/assistant/assistant-overview/on-boarding-new-clients-tasks/",
+  },
+  {
+    id: "director-approvals",
+    role: "Director",
+    module: "Reviews and responses",
+    keywords: [
+      "pending approval",
+      "pending approvals",
+      "approval request",
+      "respond to approval",
+      "approve a task",
+      "approve task",
+      "approval status",
+      "approve",
+    ],
+    answer: {
+      en: "Director actions depend on the specific item and assigned permissions. This prototype cannot confirm that every pending item supports approval.",
+      ms: "Tindakan Director bergantung pada item tertentu dan kebenaran yang diberikan. Prototaip ini tidak dapat mengesahkan bahawa setiap item tertunda menyokong kelulusan.",
+    },
+    steps: {
+      en: [
+        "Open the pending or assigned item made available to your account.",
+        "Review the details and supporting documents.",
+        "Choose Review, Respond, or Approve only when that action is displayed and permitted.",
+      ],
+      ms: [
+        "Buka item tertunda atau ditugaskan yang tersedia kepada akaun anda.",
+        "Semak butiran dan dokumen sokongan.",
+        "Pilih Review, Respond atau Approve hanya apabila tindakan itu dipaparkan dan dibenarkan.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Director review flow",
+    lastUpdated: {
+      en: "Demonstration workflow; not live-verified",
+      ms: "Aliran demonstrasi; belum disahkan secara langsung",
+    },
+    guideUrl:
+      "https://help.blazetech.my/docs/ace-documentation/quickstart/director-account/",
+  },
+  {
+    id: "director-board",
+    role: "Director",
+    module: "Board documents",
+    keywords: [
+      "board documents",
+      "board document",
+      "board papers",
+      "find board",
+      "director documents",
+    ],
+    answer: {
+      en: "Directors should access only board documents that have been shared with or assigned to their account. Exact navigation is not verified in the prototype knowledge.",
+      ms: "Director sepatutnya mengakses hanya dokumen lembaga yang dikongsi atau diberikan kepada akaun mereka. Navigasi sebenar belum disahkan dalam pengetahuan prototaip.",
+    },
+    steps: {
+      en: [
+        "Open your assigned items, inbox, or available board-document area.",
+        "Select the relevant item and review the attached material.",
+        "If the document is missing, contact the responsible company-secretarial user.",
+      ],
+      ms: [
+        "Buka item ditugaskan, peti masuk atau bahagian dokumen lembaga yang tersedia.",
+        "Pilih item berkaitan dan semak bahan yang dilampirkan.",
+        "Jika dokumen tiada, hubungi pengguna company-secretarial yang bertanggungjawab.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Director documents",
+    lastUpdated: {
+      en: "Navigation not live-verified",
+      ms: "Navigasi belum disahkan secara langsung",
+    },
+    guideUrl:
+      "https://help.blazetech.my/docs/ace-documentation/quickstart/director-account/",
+  },
+  {
+    id: "director-items",
+    role: "Director",
+    module: "Assigned items",
+    keywords: [
+      "assigned items",
+      "my assigned items",
+      "check assigned",
+      "director items",
+      "pending items",
+      "inbox",
+    ],
+    answer: {
+      en: "A Director should focus on items specifically shared with or assigned to their account. Available actions vary by item.",
+      ms: "Director perlu memberi tumpuan kepada item yang dikongsi atau diberikan secara khusus kepada akaun mereka. Tindakan tersedia berbeza mengikut item.",
+    },
+    steps: {
+      en: [
+        "Open the available inbox, notification, or assigned-item area.",
+        "Select an item to review its status and supporting information.",
+        "Respond only through the actions made available for that item.",
+      ],
+      ms: [
+        "Buka peti masuk, notifikasi atau bahagian item ditugaskan yang tersedia.",
+        "Pilih item untuk menyemak status dan maklumat sokongan.",
+        "Beri respons hanya melalui tindakan yang tersedia untuk item tersebut.",
+      ],
+    },
+    source: "ACE Central Knowledge prototype · Director assigned items",
+    lastUpdated: {
+      en: "Demonstration workflow; not live-verified",
+      ms: "Aliran demonstrasi; belum disahkan secara langsung",
+    },
+    guideUrl:
+      "https://help.blazetech.my/docs/ace-documentation/quickstart/director-account/",
+  },
+  {
+    id: "role-overview",
+    role: "All roles",
+    module: "Role overview",
+    keywords: [
+      "what can each role do",
+      "all roles",
+      "role overview",
+      "firm cosec assistant director",
+      "difference between roles",
+      "use the ace system",
+      "ace roles",
+    ],
+    answer: {
+      en: "ACE uses role-based access: Firm manages firm-level accounts and oversight; Cosec manages company-secretarial records; Assistant works on assigned clients and tasks; Director reviews assigned items and responds where permitted.",
+      ms: "ACE menggunakan akses berdasarkan peranan: Firm mengurus akaun dan pemantauan peringkat firma; Cosec mengurus rekod kesetiausahaan syarikat; Assistant mengurus pelanggan dan tugasan yang diberikan; Director menyemak item dan memberi respons apabila dibenarkan.",
+    },
+    steps: {
+      en: [
+        "Choose the role that matches your account.",
+        "Open that role's guide to see its main responsibilities.",
+        "Remember that exact actions still depend on account permissions and assignments.",
+      ],
+      ms: [
+        "Pilih peranan yang sepadan dengan akaun anda.",
+        "Buka panduan peranan tersebut untuk melihat tanggungjawab utama.",
+        "Ingat bahawa tindakan sebenar masih bergantung pada kebenaran dan penugasan akaun.",
+      ],
+    },
+    source: "ACE Interactive Journey · role model",
+    lastUpdated: {
+      en: "Prototype content; not live-verified",
+      ms: "Kandungan prototaip; belum disahkan secara langsung",
+    },
+  },
+]
+
+const suggestedQuestions: Record<ChatLanguage, string[]> = {
+  en: [
+    "How do I add a new firm?",
+    "How do I manage company records?",
+    "How do I submit documents?",
+    "How do I approve a task?",
+    "What can each ACE role do?",
+  ],
+  ms: [
+    "Bagaimana saya menambah firma baharu?",
+    "Bagaimana saya mengurus rekod syarikat?",
+    "Bagaimana saya menghantar dokumen?",
+    "Bagaimana saya meluluskan tugasan?",
+    "Apakah fungsi setiap peranan ACE?",
+  ],
+}
+
+const chatLabels = {
+  en: {
+    subtitle: "How can I help you today?",
+    notice: "Intelligent prototype · not connected to live ACE",
+    customer: "Customer",
+    staff: "Staff",
+    staffLocked: "Staff mode requires authenticated ACE access",
+    staffBody:
+      "Internal troubleshooting and operational guides are protected. Authentication is not connected in this frontend prototype.",
+    backToCustomer: "Return to Customer mode",
+    suggestions: "Suggested questions",
+    placeholder: "Ask me anything about ACE...",
+    askLabel: "Ask a question about ACE",
+    source: "Source",
+    updated: "Last updated",
+    related: "View related guide",
+    followUp: "Follow-up answer",
+    helpful: "Helpful",
+    notHelpful: "Not Helpful",
+    feedbackThanks: "Thanks for your feedback.",
+    contact: "Contact support",
+    clear: "Clear",
+    welcome:
+      "Hi! 👋 I'm ACE AI Assistant. I can help you understand and navigate the ACE system. Ask me anything about Firm, Cosec, Assistant or Director processes.",
+    fallback:
+      "I could not find a sufficiently clear or approved answer in this prototype knowledge source. I will not invent a procedure. Try mentioning your ACE role and the feature you are using, or contact support.",
+    support:
+      "Support handoff is not connected in this frontend prototype. In the intended product, this action would securely send the conversation and relevant context to an authorised ACE support channel.",
+  },
+  ms: {
+    subtitle: "Bagaimana saya boleh membantu anda?",
+    notice: "Prototaip pintar · tidak disambung kepada ACE langsung",
+    customer: "Pelanggan",
+    staff: "Staf",
+    staffLocked: "Mod staf memerlukan akses ACE yang disahkan",
+    staffBody:
+      "Panduan penyelesaian masalah dan operasi dalaman dilindungi. Pengesahan tidak disambung dalam prototaip frontend ini.",
+    backToCustomer: "Kembali ke mod Pelanggan",
+    suggestions: "Soalan cadangan",
+    placeholder: "Tanya apa sahaja tentang ACE...",
+    askLabel: "Tanya soalan tentang ACE",
+    source: "Sumber",
+    updated: "Kemas kini terakhir",
+    related: "Lihat panduan berkaitan",
+    followUp: "Jawapan susulan",
+    helpful: "Membantu",
+    notHelpful: "Tidak Membantu",
+    feedbackThanks: "Terima kasih atas maklum balas anda.",
+    contact: "Hubungi sokongan",
+    clear: "Padam",
+    welcome:
+      "Hai! 👋 Saya ACE AI Assistant. Saya boleh membantu anda memahami dan menggunakan sistem ACE. Tanya saya tentang proses Firm, Cosec, Assistant atau Director.",
+    fallback:
+      "Saya tidak menemui jawapan yang cukup jelas atau diluluskan dalam sumber pengetahuan prototaip ini. Saya tidak akan mereka prosedur. Cuba nyatakan peranan ACE dan fungsi yang anda gunakan, atau hubungi sokongan.",
+    support:
+      "Penyerahan kepada sokongan tidak disambung dalam prototaip frontend ini. Dalam produk sebenar, tindakan ini akan menghantar perbualan dan konteks berkaitan secara selamat kepada saluran sokongan ACE yang dibenarkan.",
+  },
+}
+
+function createMessage(
+  sender: ChatMessage["sender"],
+  text: string,
+  kind?: ChatMessage["kind"],
+): ChatMessage {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    sender,
+    text,
+    kind,
+  }
+}
+
+function findKnowledgeEntry(
+  question: string,
+  previousEntryId?: string,
+): { entry?: KnowledgeEntry; contextual: boolean } {
+  let normalised = question.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ")
+  const malayIntentMap: Record<string, string> = {
+    "firma baharu": "new firm",
+    "akaun cosec": "cosec account",
+    "urus pelanggan": "manage clients",
+    "kumpulan pelanggan": "client groups",
+    langganan: "subscription",
+    "urus tugasan": "manage tasks",
+    "rekod syarikat": "company records",
+    "daftar berkanun": "statutory registers",
+    "dokumen syarikat": "company documents",
+    pemfailan: "filing",
+    "tugasan diberikan": "assigned tasks",
+    "kemajuan tugasan": "task progress",
+    "hantar dokumen": "submit documents",
+    "onboarding pelanggan": "client onboarding",
+    "kelulusan tertunda": "pending approvals",
+    "meluluskan tugasan": "approve task",
+    "dokumen lembaga": "board documents",
+    "item ditugaskan": "assigned items",
+    "setiap peranan": "what can each role do",
+  }
+  for (const [malay, english] of Object.entries(malayIntentMap)) {
+    normalised = normalised.replace(malay, english)
+  }
+  let bestEntry: KnowledgeEntry | undefined
+  let bestScore = 0
+
+  for (const entry of knowledgeEntries) {
+    const score = entry.keywords.reduce((total, keyword) => {
+      if (!normalised.includes(keyword)) return total
+      return total + Math.max(1, keyword.split(" ").length)
+    }, 0)
+    if (score > bestScore) {
+      bestEntry = entry
+      bestScore = score
+    }
+  }
+
+  if (bestEntry && bestScore > 0) return { entry: bestEntry, contextual: false }
+
+  const looksLikeFollowUp =
+    normalised.split(/\s+/).length <= 8 ||
+    /\b(then|next|more|it|that|this|selepas|seterusnya|lagi|itu|ini)\b/.test(
+      normalised,
+    )
+  if (previousEntryId && looksLikeFollowUp) {
+    return {
+      entry: knowledgeEntries.find((entry) => entry.id === previousEntryId),
+      contextual: true,
+    }
+  }
+
+  return { contextual: false }
+}
+
+function AceChatbot() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [input, setInput] = useState("")
+  const [language, setLanguage] = useState<ChatLanguage>("en")
+  const [mode, setMode] = useState<KnowledgeMode>("customer")
+  const [lastEntryId, setLastEntryId] = useState<string>()
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = window.localStorage.getItem("ace-ai-knowledge-history-v2")
+      if (saved) return JSON.parse(saved) as ChatMessage[]
+    } catch {
+      // Local history is optional in the prototype.
+    }
+    return [
+      {
+        id: "welcome",
+        sender: "assistant",
+        text: "",
+        kind: "welcome",
+      },
+    ]
+  })
+  const labels = chatLabels[language]
+
+  useEffect(() => {
+    if (!isOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false)
+    }
+    window.addEventListener("keydown", closeOnEscape)
+    return () => window.removeEventListener("keydown", closeOnEscape)
+  }, [isOpen])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "ace-ai-knowledge-history-v2",
+        JSON.stringify(messages.slice(-30)),
+      )
+    } catch {
+      // The chat still works when local storage is unavailable.
+    }
+  }, [messages])
+
+  const addIntelligentResponse = (question: string) => {
+    const match = findKnowledgeEntry(question, lastEntryId)
+    const userMessage = createMessage("user", question)
+    const assistantMessage = createMessage(
+      "assistant",
+      "",
+      match.entry ? "answer" : "fallback",
+    )
+    assistantMessage.entryId = match.entry?.id
+    assistantMessage.contextual = match.contextual
+    setMessages((current) => [...current, userMessage, assistantMessage])
+    if (match.entry) setLastEntryId(match.entry.id)
+  }
+
+  const submitMessage = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const question = input.trim()
+    if (!question) return
+    addIntelligentResponse(question)
+    setInput("")
+  }
+
+  const setFeedback = (
+    messageId: string,
+    feedback: NonNullable<ChatMessage["feedback"]>,
+  ) => {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === messageId ? { ...message, feedback } : message,
+      ),
+    )
+  }
+
+  const requestSupport = () => {
+    setMessages((current) => [
+      ...current,
+      createMessage("assistant", "", "support"),
+    ])
+  }
+
+  const clearHistory = () => {
+    setMessages([
+      {
+        id: "welcome",
+        sender: "assistant",
+        text: "",
+        kind: "welcome",
+      },
+    ])
+    setLastEntryId(undefined)
+  }
+
+  return (
+    <div className="ace-chatbot">
+      {isOpen && (
+        <section
+          className="ace-chatbot__window"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="ace-chatbot-title"
+        >
+          <header className="ace-chatbot__header">
+            <div className="ace-chatbot__identity">
+              <span className="ace-chatbot__mark">
+                <Icon name="chat" size={21} />
+                <Icon name="spark" size={10} />
+              </span>
+              <span>
+                <strong id="ace-chatbot-title">ACE AI Assistant</strong>
+                <small>{labels.subtitle}</small>
+              </span>
+            </div>
+            <div className="ace-chatbot__header-actions">
+              <button
+                className="ace-chatbot__clear"
+                type="button"
+                onClick={clearHistory}
+              >
+                {labels.clear}
+              </button>
+              <button
+                className="ace-chatbot__close"
+                type="button"
+                aria-label="Close ACE AI Assistant"
+                onClick={() => setIsOpen(false)}
+              >
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+          </header>
+
+          <div className="ace-chatbot__notice">
+            <span />
+            {labels.notice}
+          </div>
+
+          <div className="ace-chatbot__controls">
+            <div className="ace-chatbot__mode" aria-label="Knowledge access mode">
+              <button
+                className={mode === "customer" ? "active" : ""}
+                type="button"
+                onClick={() => setMode("customer")}
+              >
+                {labels.customer}
+              </button>
+              <button
+                className={mode === "staff" ? "active" : ""}
+                type="button"
+                onClick={() => setMode("staff")}
+              >
+                <Icon name="shield" size={12} />
+                {labels.staff}
+              </button>
+            </div>
+            <div className="ace-chatbot__language" aria-label="Language">
+              <button
+                className={language === "en" ? "active" : ""}
+                type="button"
+                onClick={() => setLanguage("en")}
+              >
+                EN
+              </button>
+              <button
+                className={language === "ms" ? "active" : ""}
+                type="button"
+                onClick={() => setLanguage("ms")}
+              >
+                BM
+              </button>
+            </div>
+          </div>
+
+          {mode === "staff" ? (
+            <div className="ace-chatbot__staff-lock">
+              <span>
+                <Icon name="shield" size={27} />
+              </span>
+              <strong>{labels.staffLocked}</strong>
+              <p>{labels.staffBody}</p>
+              <button type="button" onClick={() => setMode("customer")}>
+                {labels.backToCustomer}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="ace-chatbot__messages" aria-live="polite">
+                {messages.map((message) => {
+                  const entry = message.entryId
+                    ? knowledgeEntries.find(
+                        (knowledge) => knowledge.id === message.entryId,
+                      )
+                    : undefined
+                  const displayText =
+                    message.kind === "welcome"
+                      ? labels.welcome
+                      : message.kind === "fallback"
+                        ? labels.fallback
+                        : message.kind === "support"
+                          ? labels.support
+                          : message.text
+
+                  return (
+                    <div
+                      className={`ace-chatbot__message ace-chatbot__message--${message.sender}`}
+                      key={message.id}
+                    >
+                      {message.sender === "assistant" && (
+                        <span className="ace-chatbot__avatar">
+                          <Icon name="spark" size={13} />
+                        </span>
+                      )}
+                      {entry ? (
+                        <div className="ace-chatbot__answer">
+                          <div className="ace-chatbot__answer-tags">
+                            <span>{entry.role}</span>
+                            <span>{entry.module}</span>
+                            {message.contextual && (
+                              <span>{labels.followUp}</span>
+                            )}
+                          </div>
+                          <p>{entry.answer[language]}</p>
+                          <ol>
+                            {entry.steps[language].map((step) => (
+                              <li key={step}>{step}</li>
+                            ))}
+                          </ol>
+                          <dl>
+                            <div>
+                              <dt>{labels.source}</dt>
+                              <dd>{entry.source}</dd>
+                            </div>
+                            <div>
+                              <dt>{labels.updated}</dt>
+                              <dd>{entry.lastUpdated[language]}</dd>
+                            </div>
+                          </dl>
+                          <div className="ace-chatbot__answer-actions">
+                            {entry.guideUrl && (
+                              <a
+                                href={entry.guideUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {labels.related}
+                                <Icon name="arrow" size={14} />
+                              </a>
+                            )}
+                            <div className="ace-chatbot__feedback">
+                              <button
+                                className={
+                                  message.feedback === "helpful" ? "active" : ""
+                                }
+                                type="button"
+                                onClick={() =>
+                                  setFeedback(message.id, "helpful")
+                                }
+                              >
+                                <span aria-hidden="true">+</span>
+                                {labels.helpful}
+                              </button>
+                              <button
+                                className={
+                                  message.feedback === "not-helpful"
+                                    ? "active"
+                                    : ""
+                                }
+                                type="button"
+                                onClick={() =>
+                                  setFeedback(message.id, "not-helpful")
+                                }
+                              >
+                                <span aria-hidden="true">−</span>
+                                {labels.notHelpful}
+                              </button>
+                            </div>
+                          </div>
+                          {message.feedback && (
+                            <div className="ace-chatbot__feedback-note">
+                              {labels.feedbackThanks}
+                              {message.feedback === "not-helpful" && (
+                                <button type="button" onClick={requestSupport}>
+                                  {labels.contact}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="ace-chatbot__simple-answer">
+                          <p>{displayText}</p>
+                          {message.kind === "fallback" && (
+                            <button type="button" onClick={requestSupport}>
+                              <Icon name="person" size={14} />
+                              {labels.contact}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {messages.length === 1 && (
+                <div className="ace-chatbot__suggestions">
+                  <span>{labels.suggestions}</span>
+                  {suggestedQuestions[language].map((question) => (
+                    <button
+                      type="button"
+                      key={question}
+                      onClick={() => addIntelligentResponse(question)}
+                    >
+                      {question}
+                      <Icon name="chevron" size={15} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <form className="ace-chatbot__composer" onSubmit={submitMessage}>
+                <label className="sr-only" htmlFor="ace-chatbot-input">
+                  {labels.askLabel}
+                </label>
+                <input
+                  id="ace-chatbot-input"
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  placeholder={labels.placeholder}
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  aria-label="Send message"
+                  disabled={!input.trim()}
+                >
+                  <Icon name="send" size={18} />
+                </button>
+              </form>
+            </>
+          )}
+        </section>
+      )}
+
+      <div className="ace-chatbot__launcher-wrap">
+        <span className="ace-chatbot__tooltip" role="tooltip">
+          Ask ACE AI
+        </span>
+        <button
+          className={`ace-chatbot__launcher ${
+            isOpen ? "ace-chatbot__launcher--open" : ""
+          }`}
+          type="button"
+          aria-label={isOpen ? "Close ACE AI Assistant" : "Ask ACE AI"}
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <Icon name={isOpen ? "x" : "chat"} size={27} />
+          {!isOpen && (
+            <span className="ace-chatbot__launcher-spark">
+              <Icon name="spark" size={13} />
+            </span>
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [path, setPath] = useState(getPath)
 
@@ -1133,6 +2219,14 @@ export default function App() {
   )?.[1] as RoleSlug | undefined
   const role = roles.find((item) => item.slug === slug)
 
-  if (role) return <RolePage role={role} navigate={navigate} />
-  return <HomePage navigate={navigate} />
+  return (
+    <>
+      {role ? (
+        <RolePage role={role} navigate={navigate} />
+      ) : (
+        <HomePage navigate={navigate} />
+      )}
+      <AceChatbot />
+    </>
+  )
 }
